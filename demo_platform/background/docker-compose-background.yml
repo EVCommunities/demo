@@ -1,0 +1,141 @@
+version: '3.5'
+
+services:
+
+    rabbitmq:
+        image: rabbitmq:3.10.8-management
+        container_name: simces_rabbitmq
+        restart: always
+        ports:
+            - 25671:5671
+            - 25672:15672
+        volumes:
+            - ./config/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+        secrets:
+            - certificate
+            - ca_certificate
+            - server_key
+        networks:
+            - rabbitmq_network
+
+    mongodb:
+        image: mongo:4.4.17
+        container_name: simces_mongodb
+        restart: always
+        environment:
+            - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME}
+            - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+            - MONGO_INITDB_DATABASE=${MONGO_METADATA_DATABASE}
+        ports:
+            - 25670:27017
+        command: ["mongod", "--config", "/etc/mongod.conf"]
+        volumes:
+            - mongodb_data:/data/db
+            - ./config/mongod.conf:/etc/mongod.conf
+        secrets:
+            - certificate
+            - ca_certificate
+        networks:
+            - mongodb_network
+
+    mongodb-initializer:
+        build:
+            context: ./utility-scripts
+            dockerfile: Dockerfile-init
+        image: mongodb-shell-init:4.4.17
+        container_name: simces_mongodb-init
+        restart: "no"
+        environment:
+            - MONGODB_HOST=${MONGODB_HOST}
+            - MONGODB_PORT=${MONGODB_PORT}
+            - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME}
+            - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
+            - MONGO_INITDB_DATABASE=${MONGO_METADATA_DATABASE}
+            - MONGO_USERNAME=${MONGO_USERNAME}
+            - MONGO_PASSWORD=${MONGO_PASSWORD}
+            - MONGO_ADDITIONAL_DATABASES=${MONGO_ADDITIONAL_DATABASES}
+        entrypoint: ["/wait-for-it.sh", "simces_mongodb:27017", "--timeout=120", "--", "/mongodb-init.sh"]
+        networks:
+            - mongodb_network
+
+    mongo_express:
+        image: mongo-express:1.0.0-alpha
+        container_name: simces_mongo_express
+        restart: always
+        depends_on:
+            - mongodb
+        environment:
+            - ME_CONFIG_MONGODB_SERVER=${MONGODB_HOST}
+            - ME_CONFIG_MONGODB_PORT=${MONGODB_PORT}
+            - ME_CONFIG_SITE_BASEURL=${ME_CONFIG_SITE_BASEURL}
+            - ME_CONFIG_MONGODB_ENABLE_ADMIN=${ME_CONFIG_MONGODB_ENABLE_ADMIN}
+            - ME_CONFIG_BASICAUTH_USERNAME=${ME_CONFIG_BASICAUTH_USERNAME}
+            - ME_CONFIG_BASICAUTH_PASSWORD=${ME_CONFIG_BASICAUTH_PASSWORD}
+            - ME_CONFIG_MONGODB_AUTH_DATABASE=${MONGO_METADATA_DATABASE}
+            - ME_CONFIG_MONGODB_AUTH_USERNAME=${MONGO_USERNAME}
+            - ME_CONFIG_MONGODB_AUTH_PASSWORD=${MONGO_PASSWORD}
+            - ME_CONFIG_MONGODB_SSL=${ME_CONFIG_MONGODB_SSL}
+            - ME_CONFIG_MONGODB_SSLVALIDATE=${ME_CONFIG_MONGODB_SSLVALIDATE}
+            - ME_CONFIG_MONGODB_CA_FILE=/run/secrets/ca_certificate
+        ports:
+            - 8081:8081
+        volumes:
+            - ./config/mongo-express-config.js:/node_modules/mongo-express/config.js
+        secrets:
+            - ca_certificate
+        networks:
+            - mongodb_network
+
+    log_reader:
+        image: ghcr.io/simcesplatform/logreader
+        container_name: simces_log_reader
+        restart: always
+        depends_on:
+            - mongodb
+        env_file:
+            - env/components_mongodb.env
+        environment:
+            - MONGODB_APPNAME=log_writer
+        ports:
+            - 8080:8080
+        networks:
+            - mongodb_network
+
+    log_writer_management:
+        image: ghcr.io/simcesplatform/logwriter
+        container_name: simces_log_writer_management
+        restart: always
+        depends_on:
+            - mongodb
+        env_file:
+            - env/components_mongodb.env
+            - env/components_logwriter.env
+        volumes:
+            - simulation_logs:/logs
+        networks:
+            - mongodb_network
+            - rabbitmq_network
+
+volumes:
+    mongodb_data:
+        external: true
+        name: simces_mongodb_data
+    simulation_logs:
+        external: true
+        name: simces_simulation_logs
+
+networks:
+    rabbitmq_network:
+        external: true
+        name: simces_rabbitmq_network
+    mongodb_network:
+        external: true
+        name: simces_mongodb_network
+
+secrets:
+    certificate:
+        file: ./ssl/evc.pem
+    ca_certificate:
+        file: ./ssl/ca.pem
+    server_key:
+        file: ./ssl/privkey.pem

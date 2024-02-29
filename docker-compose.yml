@@ -1,0 +1,36 @@
+version: '3.7'
+
+services:
+
+  nginx:
+    image: nginx:1.25.4
+    ports:
+      - target: 80
+        published: 80
+        mode: host
+        protocol: tcp
+      - target: 443
+        published: 443
+        mode: host
+        protocol: tcp
+    secrets:
+      - certificate
+      - dhparams
+      - private_key
+      - etc_pass_file
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./nginx:/etc/nginx:ro
+    command: [nginx, '-g', 'daemon off;']
+
+secrets:
+  certificate:
+    file: ./certificates/fullchain.pem
+  dhparams:
+    file: ./certificates/dhparam.pem
+  private_key:
+    file: ./secrets/privkey.pem
+  etc_pass_file:
+    file: ./secrets/pass_etc.wd

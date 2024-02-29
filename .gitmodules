@@ -1,0 +1,6 @@
+[submodule "Simulation-Starter"]
+	path = Simulation-Starter
+	url = git@github.com:EVCommunities/Simulation-Starter.git
+[submodule "GUI"]
+	path = GUI
+	url = git@github.com:EVCommunities/GUI.git

@@ -4,12 +4,19 @@
 set -e
 
 # download the SimCES platform files from the GitHub repository
+mkdir -p platform
 cd platform
 wget https://raw.githubusercontent.com/simcesplatform/Platform-Manager/master/fetch_platform_files.sh
 echo "y" | source fetch_platform_files.sh github
 
 # copy the demo specific settings to the platform directory
 cp -r ../demo_platform/* .
+
+# ensure the execution permissions for the utility scripts
+chmod a+x background/utility_scripts/*.sh
+
+# remove unnecessary configuration files
+rm -rf background/env
 
 # fetch root certificate from Let's Encrypt
 mkdir -p background/ssl

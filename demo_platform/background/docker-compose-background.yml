@@ -7,8 +7,8 @@ services:
         container_name: simces_rabbitmq
         restart: always
         ports:
-            - 25671:5671
-            - 25672:15672
+            - ${RABBITMQ_PORT}:5671
+            - ${RABBITMQ_MANAGEMENT_PORT}:15672
         volumes:
             - ./config/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
         secrets:
@@ -23,11 +23,11 @@ services:
         container_name: simces_mongodb
         restart: always
         environment:
-            - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME}
-            - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
-            - MONGO_INITDB_DATABASE=${MONGO_METADATA_DATABASE}
+            MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+            MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+            MONGO_INITDB_DATABASE: ${MONGO_METADATA_DATABASE}
         ports:
-            - 25670:27017
+            - ${MONGODB_PORT}:27017
         command: ["mongod", "--config", "/etc/mongod.conf"]
         volumes:
             - mongodb_data:/data/db
@@ -40,20 +40,20 @@ services:
 
     mongodb-initializer:
         build:
-            context: ./utility-scripts
+            context: ./utility_scripts
             dockerfile: Dockerfile-init
         image: mongodb-shell-init:4.4.17
         container_name: simces_mongodb-init
         restart: "no"
         environment:
-            - MONGODB_HOST=${MONGODB_HOST}
-            - MONGODB_PORT=${MONGODB_PORT}
-            - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME}
-            - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
-            - MONGO_INITDB_DATABASE=${MONGO_METADATA_DATABASE}
-            - MONGO_USERNAME=${MONGO_USERNAME}
-            - MONGO_PASSWORD=${MONGO_PASSWORD}
-            - MONGO_ADDITIONAL_DATABASES=${MONGO_ADDITIONAL_DATABASES}
+            MONGODB_HOST: ${SERVER_ADDRESS}
+            MONGODB_PORT: ${MONGODB_PORT}
+            MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+            MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+            MONGO_INITDB_DATABASE: ${MONGO_METADATA_DATABASE}
+            MONGO_USERNAME: ${MONGO_USERNAME}
+            MONGO_PASSWORD: ${MONGO_PASSWORD}
+            MONGO_ADDITIONAL_DATABASES: ${MONGO_ADDITIONAL_DATABASES}
         entrypoint: ["/wait-for-it.sh", "simces_mongodb:27017", "--timeout=120", "--", "/mongodb-init.sh"]
         networks:
             - mongodb_network
@@ -65,20 +65,20 @@ services:
         depends_on:
             - mongodb
         environment:
-            - ME_CONFIG_MONGODB_SERVER=${MONGODB_HOST}
-            - ME_CONFIG_MONGODB_PORT=${MONGODB_PORT}
-            - ME_CONFIG_SITE_BASEURL=${ME_CONFIG_SITE_BASEURL}
-            - ME_CONFIG_MONGODB_ENABLE_ADMIN=${ME_CONFIG_MONGODB_ENABLE_ADMIN}
-            - ME_CONFIG_BASICAUTH_USERNAME=${ME_CONFIG_BASICAUTH_USERNAME}
-            - ME_CONFIG_BASICAUTH_PASSWORD=${ME_CONFIG_BASICAUTH_PASSWORD}
-            - ME_CONFIG_MONGODB_AUTH_DATABASE=${MONGO_METADATA_DATABASE}
-            - ME_CONFIG_MONGODB_AUTH_USERNAME=${MONGO_USERNAME}
-            - ME_CONFIG_MONGODB_AUTH_PASSWORD=${MONGO_PASSWORD}
-            - ME_CONFIG_MONGODB_SSL=${ME_CONFIG_MONGODB_SSL}
-            - ME_CONFIG_MONGODB_SSLVALIDATE=${ME_CONFIG_MONGODB_SSLVALIDATE}
-            - ME_CONFIG_MONGODB_CA_FILE=/run/secrets/ca_certificate
+            ME_CONFIG_MONGODB_SERVER: ${SERVER_ADDRESS}
+            ME_CONFIG_MONGODB_PORT: ${MONGODB_PORT}
+            ME_CONFIG_SITE_BASEURL: ${ME_CONFIG_SITE_BASEURL}
+            ME_CONFIG_MONGODB_ENABLE_ADMIN: ${ME_CONFIG_MONGODB_ENABLE_ADMIN}
+            ME_CONFIG_BASICAUTH_USERNAME: ${ME_CONFIG_BASICAUTH_USERNAME}
+            ME_CONFIG_BASICAUTH_PASSWORD: ${ME_CONFIG_BASICAUTH_PASSWORD}
+            ME_CONFIG_MONGODB_AUTH_DATABASE: ${MONGO_METADATA_DATABASE}
+            ME_CONFIG_MONGODB_AUTH_USERNAME: ${MONGO_USERNAME}
+            ME_CONFIG_MONGODB_AUTH_PASSWORD: ${MONGO_PASSWORD}
+            ME_CONFIG_MONGODB_SSL: ${ME_CONFIG_MONGODB_SSL}
+            ME_CONFIG_MONGODB_SSLVALIDATE: ${ME_CONFIG_MONGODB_SSLVALIDATE}
+            ME_CONFIG_MONGODB_CA_FILE: /run/secrets/ca_certificate
         ports:
-            - 8081:8081
+            - ${MONGO_EXPRESS_PORT}:8081
         volumes:
             - ./config/mongo-express-config.js:/node_modules/mongo-express/config.js
         secrets:
@@ -92,12 +92,23 @@ services:
         restart: always
         depends_on:
             - mongodb
-        env_file:
-            - env/components_mongodb.env
         environment:
-            - MONGODB_APPNAME=log_writer
+            MONGODB_HOST: ${SERVER_ADDRESS}
+            MONGODB_PORT: ${MONGODB_PORT}
+            MONGODB_ADMIN: ${MONGODB_ADMIN}
+            MONGODB_USERNAME: ${MONGO_USERNAME}
+            MONGODB_PASSWORD: ${MONGO_PASSWORD}
+            MONGODB_APPNAME: log_writer
+            MONGODB_TLS: ${MONGODB_TLS}
+            MONGODB_TLS_ALLOW_INVALID_CERTIFICATES: ${MONGODB_TLS_ALLOW_INVALID_CERTIFICATES}
+            MONGODB_DATABASE: ${MONGO_METADATA_DATABASE}
+            MONGODB_COLLECTION_IDENTIFIER: ${MONGODB_COLLECTION_IDENTIFIER}
+            MONGODB_METADATA_COLLECTION: ${MONGODB_METADATA_COLLECTION}
+            MONGODB_MESSAGES_COLLECTION_PREFIX: ${MONGODB_MESSAGES_COLLECTION_PREFIX}
+            MONGODB_INVALID_MESSAGES_COLLECTION_PREFIX: ${MONGODB_INVALID_MESSAGES_COLLECTION_PREFIX}
+            MONGODB_TZ_AWARE: ${MONGODB_TZ_AWARE}
         ports:
-            - 8080:8080
+            - ${LOG_READER_PORT}:8080
         networks:
             - mongodb_network
 
@@ -107,9 +118,36 @@ services:
         restart: always
         depends_on:
             - mongodb
-        env_file:
-            - env/components_mongodb.env
-            - env/components_logwriter.env
+        environment:
+            MONGODB_HOST: ${SERVER_ADDRESS}
+            MONGODB_PORT: ${MONGODB_PORT}
+            MONGODB_DATABASE: ${MONGO_METADATA_DATABASE}
+            MONGODB_USERNAME: ${MONGO_USERNAME}
+            MONGODB_PASSWORD: ${MONGO_PASSWORD}
+            MONGODB_ADMIN: ${MONGODB_ADMIN}
+            MONGODB_TLS: ${MONGODB_TLS}
+            MONGODB_TLS_ALLOW_INVALID_CERTIFICATES: ${MONGODB_TLS_ALLOW_INVALID_CERTIFICATES}
+            MONGODB_APPNAME: log_writer_management
+            MONGODB_METADATA_COLLECTION: ${MONGODB_METADATA_COLLECTION}
+            MONGODB_COLLECTION_IDENTIFIER: ${MONGODB_COLLECTION_IDENTIFIER}
+            MONGODB_INVALID_MESSAGES_COLLECTION_PREFIX: ${MONGODB_INVALID_MESSAGES_COLLECTION_PREFIX}
+            MONGODB_MESSAGES_COLLECTION_PREFIX: ${MONGODB_MESSAGES_COLLECTION_PREFIX}
+            MONGODB_TZ_AWARE: ${MONGODB_TZ_AWARE}
+            RABBITMQ_HOST: ${SERVER_ADDRESS}
+            RABBITMQ_PORT: ${RABBITMQ_PORT}
+            RABBITMQ_LOGIN: ${RABBITMQ_USER}
+            RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+            RABBITMQ_SSL: ${RABBITMQ_SSL}
+            RABBITMQ_SSL_VERSION: ${RABBITMQ_SSL_VERSION}
+            RABBITMQ_EXCHANGE: ${RABBITMQ_EXCHANGE}
+            RABBITMQ_EXCHANGE_AUTODELETE: ${RABBITMQ_EXCHANGE_AUTODELETE}
+            RABBITMQ_EXCHANGE_DURABLE: ${RABBITMQ_EXCHANGE_DURABLE}
+            SIMULATION_ID: ${SIMULATION_ID}
+            SIMULATION_LOG_LEVEL: ${SIMULATION_LOG_LEVEL}
+            SIMULATION_LOG_FILE: ${SIMULATION_LOG_FILE}
+            MESSAGE_BUFFER_MAX_DOCUMENTS: ${MESSAGE_BUFFER_MAX_DOCUMENTS}
+            MESSAGE_BUFFER_MAX_INTERVAL: ${MESSAGE_BUFFER_MAX_INTERVAL}
+            STATISTICS_DISPLAY_INTERVAL: ${STATISTICS_DISPLAY_INTERVAL}
         volumes:
             - simulation_logs:/logs
         networks:

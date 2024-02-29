@@ -1,1 +1,4 @@
 .env
+!demo_platform/background/.env
+platform/**
+.vscode/**

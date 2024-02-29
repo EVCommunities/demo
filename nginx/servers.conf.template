@@ -2,8 +2,9 @@ charset utf-8;
 
 server
 {
-    listen 443 ssl http2;
-    server_name ;
+    listen 443 ssl;
+    http2 on;
+    server_name ${host_server_name};
 
     ssl_certificate /run/secrets/certificate;
     ssl_certificate_key /run/secrets/private_key;
@@ -25,19 +26,19 @@ server
     location /logreader/
     {
         proxy_cache_valid any 10s;
-        proxy_pass http://host.docker.internal:/;
+        proxy_pass http://host.docker.internal:${log_reader_port}/;
     }
 
     location /mongoexpress/
     {
-        proxy_no_cache $http_host;
-        proxy_pass http://host.docker.internal:/mongoexpress/;
+        proxy_no_cache £http_host;
+        proxy_pass http://host.docker.internal:${mongo_express_port}/mongoexpress/;
     }
 
     location /rabbitmq/
     {
-        proxy_no_cache $http_host;
-        proxy_pass http://host.docker.internal:/rabbitmq/;
+        proxy_no_cache £http_host;
+        proxy_pass http://host.docker.internal:${rabbitmq_management_port}/rabbitmq/;
     }
 
     location = /starter/docs
@@ -45,11 +46,11 @@ server
         auth_basic "Private location";
         auth_basic_user_file /run/secrets/etc_pass_file;
 
-        if ($request_method != 'GET') {
-            return 401 '$request_method not allowed for $host/starter/docs';
+        if (£request_method != 'GET') {
+            return 401 '£request_method not allowed for £host/starter/docs';
         }
 
-        proxy_pass http://host.docker.internal:/starter/docs;
+        proxy_pass http://host.docker.internal:${starter_port}/starter/docs;
     }
 
     location /starter/docs/
@@ -57,27 +58,27 @@ server
         auth_basic "Private location";
         auth_basic_user_file /run/secrets/etc_pass_file;
 
-        if ($request_method != 'GET') {
-            return 401 '$request_method not allowed for $host/starter/docs';
+        if (£request_method != 'GET') {
+            return 401 '£request_method not allowed for £host/starter/docs';
         }
 
-        proxy_pass http://host.docker.internal:/starter/docs/;
+        proxy_pass http://host.docker.internal:${starter_port}/starter/docs/;
     }
 
     location = /starter/
     {
-        if ($request_method != 'POST') {
-            return 401 '$request_method not allowed for $host/starter/';
+        if (£request_method != 'POST') {
+            return 401 '£request_method not allowed for £host/starter/';
         }
 
-        proxy_no_cache $http_host;
-        proxy_pass http://host.docker.internal:/starter/;
+        proxy_no_cache £http_host;
+        proxy_pass http://host.docker.internal:${starter_port}/starter/;
     }
 
     location /demo/backend/
     {
-        proxy_no_cache $http_host;
-        proxy_pass http://host.docker.internal:/;
+        proxy_no_cache £http_host;
+        proxy_pass http://host.docker.internal:${gui_backend_port}/;
     }
 
     location /
@@ -85,18 +86,18 @@ server
         auth_basic "Private location";
         auth_basic_user_file /run/secrets/etc_pass_file;
 
-        proxy_no_cache $http_host;
-        proxy_pass http://host.docker.internal:/;
+        proxy_no_cache £http_host;
+        proxy_pass http://host.docker.internal:${gui_frontend_port}/;
     }
 }
 
 server
 {
     listen 80;
-    server_name ;
+    server_name ${host_server_name};
 
     location /
     {
-        rewrite ^(.*) https://$1 permanent;
+        rewrite ^(.*) https://${host_server_name}£1 permanent;
     }
 }

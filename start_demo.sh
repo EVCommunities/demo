@@ -16,3 +16,10 @@ docker compose up --detach
 # start the GUI
 cd ../GUI
 docker compose up --build --detach
+
+# start the Nginx proxy
+cd ..
+docker compose up --detach
+
+
+echo "The EV Communities demo has been started"

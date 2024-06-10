@@ -12,7 +12,7 @@ services:
         volumes:
             - ./config/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
         secrets:
-            - certificate
+            - fullchain_certificate
             - ca_certificate
             - server_key
         networks:
@@ -173,6 +173,8 @@ networks:
 secrets:
     certificate:
         file: ./ssl/evc.pem
+    fullchain_certificate:
+        file: ./ssl/fullchain.pem
     ca_certificate:
         file: ./ssl/ca.pem
     server_key:

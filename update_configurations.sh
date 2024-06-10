@@ -3,6 +3,14 @@
 # stop on error
 set -e
 
+# copy the needed secrets to the platform directory
+cp secrets/cert.pem platform/background/ssl/cert.pem
+cp secrets/fullchain.pem platform/background/ssl/fullchain.pem
+cp secrets/privkey.pem platform/background/ssl/privkey.pem
+
+# create a chained certificate file for MongoDB by compining the private key and the certificate
+cat platform/background/ssl/cert.pem platform/background/ssl/privkey.pem > platform/background/ssl/evc.pem
+
 # collect the configurations from the .env file
 export server_address=$(cat .env | grep SERVER_ADDRESS= | cut -d'=' -f2)
 export frontend_username=$(cat .env | grep FRONTEND_USERNAME= | cut -d'=' -f2)
@@ -13,7 +21,7 @@ export mongo_username=$(cat .env | grep MONGO_USERNAME= | cut -d'=' -f2)
 export mongo_password=$(cat .env | grep MONGO_PASSWORD= | cut -d'=' -f2)
 export mongo_express_username=$(cat .env | grep MONGO_EXPRESS_USERNAME= | cut -d'=' -f2)
 export mongo_express_password=$(cat .env | grep MONGO_EXPRESS_PASSWORD= | cut -d'=' -f2)
-export rabbitmq_user=$(cat .env | grep RABBITMQ_USER= | cut -d'=' -f2)
+export rabbitmq_username=$(cat .env | grep RABBITMQ_USER= | cut -d'=' -f2)
 export rabbitmq_password=$(cat .env | grep RABBITMQ_PASSWORD= | cut -d'=' -f2)
 export mongodb_port=$(cat .env | grep MONGODB_PORT= | cut -d'=' -f2)
 export mongo_express_port=$(cat .env | grep MONGO_EXPRESS_PORT= | cut -d'=' -f2)
@@ -44,8 +52,8 @@ sed -i "s/£/\$/g" servers/servers.conf
 cd ../platform
 
 # set the RabbitMQ configurations
-sed -i "s/^default_user =.*/default_user = ${rabbitmq_user}/g" background/config/rabbitmq.conf
-sed -i "s/^default_pass =.*/default_pass = ${rabbitmq_pass}/g" background/config/rabbitmq.conf
+sed -i "s/^default_user =.*/default_user = ${rabbitmq_username}/g" background/config/rabbitmq.conf
+sed -i "s/^default_pass =.*/default_pass = ${rabbitmq_password}/g" background/config/rabbitmq.conf
 
 # set the host name of the server
 sed -i "s/^SERVER_ADDRESS=.*/SERVER_ADDRESS=${server_address}/g" background/.env
@@ -65,7 +73,7 @@ sed -i "s/^ME_CONFIG_BASICAUTH_PASSWORD=.*/ME_CONFIG_BASICAUTH_PASSWORD=${mongo_
 # set the RabbitMQ configurations
 sed -i "s/^RABBITMQ_PORT=.*/RABBITMQ_PORT=${rabbitmq_port}/g" background/.env
 sed -i "s/^RABBITMQ_MANAGEMENT_PORT=.*/RABBITMQ_MANAGEMENT_PORT=${rabbitmq_management_port}/g" background/.env
-sed -i "s/^RABBITMQ_USER=.*/RABBITMQ_USER=${rabbitmq_user}/g" background/.env
+sed -i "s/^RABBITMQ_USER=.*/RABBITMQ_USER=${rabbitmq_username}/g" background/.env
 sed -i "s/^RABBITMQ_PASSWORD=.*/RABBITMQ_PASSWORD=${rabbitmq_password}/g" background/.env
 
 # set the configurations for the logging system

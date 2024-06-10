@@ -22,12 +22,5 @@ rm -rf background/env
 mkdir -p background/ssl
 curl https://letsencrypt.org/certs/lets-encrypt-r3.pem > background/ssl/ca.pem
 
-# copy the needed secrets to the platform directory
-cp ../secrets/cert.pem background/ssl/cert.pem
-cp ../secrets/privkey.pem background/ssl/privkey.pem
-
-# create a chained certificate file for MongoDB by compining the private key and the certificate
-cat background/ssl/privkey.pem background/ssl/cert.pem > background/ssl/evc.pem
-
 
 echo "The platform files have been downloaded and configured for the EV Communities demo"
